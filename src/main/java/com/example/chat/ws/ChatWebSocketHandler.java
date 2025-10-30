@@ -35,7 +35,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         session.getAttributes().put("room", room);
         session.getAttributes().put("user", user);
 
-        publish(room, system(room, user + " joined"));
+        publish(room, user, user + " joined");
     }
 
     @Override
@@ -45,7 +45,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String user = (String) session.getAttributes().get("user");
         String text = message.getPayload();
 
-        ChatMessage chatMessage = ChatMessage.builder().room(room).user(user).text(text);
+        ChatMessage chatMessage = ChatMessage.builder().room(room).user(user).text(text).build();
 
         // convert to JSON and give to Redis
         String conversion = mapper.writeValueAsString(chatMessage);
@@ -59,7 +59,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String room = (String) session.getAttributes().get("room");
         String user = (String) session.getAttributes().get("user");
 
-        publish(room, system(room, user + " left"));
+        publish(room, user, user + " left");
     }
 
     // helper functions
@@ -76,9 +76,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return null;
     }
 
-    private void publish(String room, ChatMessage message) throws Exception {
+    private void publish(String room, String user, String s) throws Exception {
 
         // need to turn the message into JSON so that we can send it to redis and
         // redis can send it to the servers
     }
+
 }
