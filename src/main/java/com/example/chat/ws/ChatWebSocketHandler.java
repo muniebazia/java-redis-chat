@@ -1,4 +1,70 @@
 package com.example.chat.ws;
 
-public class ChatWebSocketHandler {
+import com.example.chat.model.ChatMessage;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.net.URI;
+import java.util.Map;
+
+import static org.springframework.boot.availability.AvailabilityChangeEvent.publish;
+
+@Component
+public class ChatWebSocketHandler extends TextWebSocketHandler {
+    private final StringRedisTemplate redis;
+
+    public ChatWebSocketHandler(StringRedisTemplate redis) {
+        this.redis = redis;
+    }
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        // when someone connects
+        Map<String, String> intel = parseURL(session.getUri());
+        String room = intel.getOrDefault("room", "general");
+        String user = intel.getOrDefault("user", "user");
+
+        session.getAttributes().put("room", room);
+        session.getAttributes().put("user", user);
+
+        publish(room, system(room, user + " joined"));
+    }
+
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        String room = (String) session.getAttributes().get("room");
+        String user = (String) session.getAttributes().get("user");
+        String text = "";
+        // blank messages
+
+        ChatMessage chatMessage = ChatMessage.builder().room(room).user(user).text(text);
+        
+        // session.sendMessage(new TextMessage("echo: " + message.getPayload()));
+        // going to use to create a ChatMessage object to give to Redis
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        // when someone leaves
+        String room = (String) session.getAttributes().get("room");
+        String user = (String) session.getAttributes().get("user");
+
+        publish(room, system(room, user + " left"));
+    }
+
+    // helper functions
+
+    private Map<String, String> parseURL(URI uri) {
+
+        // return a map of the info attained from the URL
+    }
+
+    private ChatMessage system(String room, String s) {
+
+        // return a system message
+    }
 }
