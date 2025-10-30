@@ -82,4 +82,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // redis can send it to the servers
     }
 
+    public void broadcast(String room, String message) {
+
+        // Redis gives the message to RedisSubscriber to send to the servers
+        // this will send it to the servers (called by RedisSubscriber)
+    }
 }
