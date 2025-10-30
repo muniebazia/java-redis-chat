@@ -11,13 +11,12 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.net.URI;
 import java.util.Map;
 
-import static org.springframework.boot.availability.AvailabilityChangeEvent.publish;
-
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final StringRedisTemplate redis;
 
     public ChatWebSocketHandler(StringRedisTemplate redis) {
+
         this.redis = redis;
     }
 
@@ -26,8 +25,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // when someone connects
         Map<String, String> intel = parseURL(session.getUri());
         String room = intel.getOrDefault("room", "general");
-        String user = intel.getOrDefault("user", "user");
+        String user = intel.getOrDefault("user", "anonymous");
 
+        // storing their info for later usage
         session.getAttributes().put("room", room);
         session.getAttributes().put("user", user);
 
@@ -36,15 +36,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        // going to use to create a ChatMessage object to give to Redis
         String room = (String) session.getAttributes().get("room");
         String user = (String) session.getAttributes().get("user");
-        String text = "";
-        // blank messages
+        String text = message.getPayload();
 
         ChatMessage chatMessage = ChatMessage.builder().room(room).user(user).text(text);
-        
-        // session.sendMessage(new TextMessage("echo: " + message.getPayload()));
-        // going to use to create a ChatMessage object to give to Redis
     }
 
     @Override
@@ -61,10 +58,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private Map<String, String> parseURL(URI uri) {
 
         // return a map of the info attained from the URL
+        return Map.of();
     }
 
     private ChatMessage system(String room, String s) {
 
         // return a system message
+        return null;
+    }
+
+    private void publish(String room, ChatMessage message) throws Exception {
+
+        // need to turn the message into JSON so that we can send it to redis and
+        // redis can send it to the servers
     }
 }
