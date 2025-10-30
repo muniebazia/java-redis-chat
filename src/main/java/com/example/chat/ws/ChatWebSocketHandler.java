@@ -1,6 +1,7 @@
 package com.example.chat.ws;
 
 import com.example.chat.model.ChatMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -15,10 +16,13 @@ import java.util.Map;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final StringRedisTemplate redis;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     public ChatWebSocketHandler(StringRedisTemplate redis) {
 
         this.redis = redis;
     }
+
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -42,6 +46,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String text = message.getPayload();
 
         ChatMessage chatMessage = ChatMessage.builder().room(room).user(user).text(text);
+
+        // convert to JSON and give to Redis
+        String conversion = mapper.writeValueAsString(chatMessage);
+
+        redis.convertAndSend(room, conversion);
     }
 
     @Override
