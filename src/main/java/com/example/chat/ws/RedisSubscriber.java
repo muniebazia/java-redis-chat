@@ -7,6 +7,7 @@ public class RedisSubscriber {
     private final ChatWebSocketHandler handler;
 
     public RedisSubscriber(ChatWebSocketHandler handler) {
+
         this.handler = handler;
     }
 
