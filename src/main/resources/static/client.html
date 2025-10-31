@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>WS Smoke Test</title>
+    <style>
+        body { font-family: system-ui, Arial; max-width: 700px; margin: 24px auto; }
+        #log { border: 1px solid #ccc; padding: 8px; height: 260px; overflow: auto; white-space: pre-wrap; }
+        input { margin: 4px; }
+    </style>
+</head>
+<body>
+<h3>WebSocket Test</h3>
+
+<div>
+    <label>WS URL:
+        <input id="url" size="40" value="ws://localhost:8080/ws">
+    </label>
+    <label>Room:
+        <input id="room" value="general">
+    </label>
+    <label>User:
+        <input id="user" placeholder="optional">
+    </label>
+    <button id="connect">Connect</button>
+    <button id="close" disabled>Close</button>
+</div>
+
+<div id="log"></div>
+
+<div>
+    <input id="msg" style="width:75%;" placeholder="type a message…" disabled>
+    <button id="send" disabled>Send</button>
+</div>
+
+<script>
+    let ws;
+    const log = document.getElementById('log');
+    const println = (t) => { log.textContent += t + '\n'; log.scrollTop = log.scrollHeight; };
+
+    const connectBtn = document.getElementById('connect');
+    const closeBtn   = document.getElementById('close');
+    const sendBtn    = document.getElementById('send');
+    const msgInput   = document.getElementById('msg');
+
+    connectBtn.onclick = () => {
+        const base = document.getElementById('url').value.trim();
+        const room = encodeURIComponent(document.getElementById('room').value || 'general');
+        const user = encodeURIComponent(document.getElementById('user').value || '');
+        const url  = `${base}?room=${room}${user ? `&user=${user}` : ''}`;
+
+        ws = new WebSocket(url);
+        ws.onopen    = () => { println('[open] connected'); sendBtn.disabled = msgInput.disabled = false; closeBtn.disabled = false; };
+        ws.onmessage = (ev) => {
+            try {
+                const m = JSON.parse(ev.data);
+                println(`[msg] [${m.room}] ${m.user ? m.user + ': ' : ''}${m.text}`);
+            } catch {
+                println(`[msg] ${ev.data}`);
+            }
+        };
+        ws.onerror   = (e) => println('[error] ' + (e.message || 'see console'));
+        ws.onclose   = (e) => { println(`[close] code=${e.code} reason=${e.reason}`); sendBtn.disabled = msgInput.disabled = true; closeBtn.disabled = true; };
+    };
+
+    sendBtn.onclick = () => {
+        if (ws && ws.readyState === 1 && msgInput.value.trim()) {
+            ws.send(msgInput.value);
+            msgInput.value = '';
+        }
+    };
+
+    closeBtn.onclick = () => { if (ws) ws.close(); };
+    msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendBtn.click(); });
+</script>
+</body>
+</html>
