@@ -42,8 +42,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         session.getAttributes().put("user", user);
 
         roomPeers.computeIfAbsent(room, k -> new CopyOnWriteArraySet<>()).add(session);
-
         publish(room, user, user + " joined");
+
     }
 
     @Override
@@ -58,7 +58,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // convert to JSON and give to Redis
         String conversion = mapper.writeValueAsString(chatMessage);
 
-        redis.convertAndSend("room: " + room, conversion);
+        redis.convertAndSend("room:" + room, conversion);
     }
 
     @Override
@@ -102,6 +102,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         ChatMessage message = new ChatMessage(room, user, s);
         String payload = mapper.writeValueAsString(message);
+        System.out.println(room);
         redis.convertAndSend("room:" + room, payload);
     }
 

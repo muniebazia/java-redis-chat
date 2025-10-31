@@ -34,7 +34,6 @@ public class RedisConfig {
         return new MessageListenerAdapter(subscriber, "handleMessage");
     }
 
-    // used in
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory factory, MessageListenerAdapter listenerAdapter) {
 
