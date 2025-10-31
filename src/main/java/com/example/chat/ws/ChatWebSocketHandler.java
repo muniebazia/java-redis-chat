@@ -10,19 +10,25 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final StringRedisTemplate redis;
-
     private final ObjectMapper mapper = new ObjectMapper();
+    private final ConcurrentMap<String, CopyOnWriteArraySet<WebSocketSession>> roomPeers = new ConcurrentHashMap<>();
 
     public ChatWebSocketHandler(StringRedisTemplate redis) {
 
         this.redis = redis;
     }
-
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -34,6 +40,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // storing their info for later usage
         session.getAttributes().put("room", room);
         session.getAttributes().put("user", user);
+
+        roomPeers.computeIfAbsent(room, k -> new CopyOnWriteArraySet<>()).add(session);
 
         publish(room, user, user + " joined");
     }
@@ -50,7 +58,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // convert to JSON and give to Redis
         String conversion = mapper.writeValueAsString(chatMessage);
 
-        redis.convertAndSend(room, conversion);
+        redis.convertAndSend("room: " + room, conversion);
     }
 
     @Override
@@ -59,6 +67,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String room = (String) session.getAttributes().get("room");
         String user = (String) session.getAttributes().get("user");
 
+        roomPeers.getOrDefault(room, new CopyOnWriteArraySet<>()).remove(session);
         publish(room, user, user + " left");
     }
 
@@ -66,25 +75,49 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private Map<String, String> parseURL(URI uri) {
 
-        // return a map of the info attained from the URL
-        return Map.of();
+        Map<String, String> map = new HashMap<>() {};
+        if (uri == null) {
+            return map;
+        }
+
+        String qs = uri.getQuery();
+        for (String kv : qs.split("&")) {
+            String[] p = kv.split("=", 2);
+            if (p.length == 2) {
+                map.put(urlDecode(p[0]), urlDecode(p[1]));
+            }
+        }
+        return map;
     }
 
-    private ChatMessage system(String room, String s) {
-
-        // return a system message
-        return null;
+    private String urlDecode(String s) {
+        try {
+            return URLDecoder.decode(s, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return s;
+        }
     }
 
     private void publish(String room, String user, String s) throws Exception {
 
-        // need to turn the message into JSON so that we can send it to redis and
-        // redis can send it to the servers
+        ChatMessage message = new ChatMessage(room, user, s);
+        String payload = mapper.writeValueAsString(message);
+        redis.convertAndSend("room:" + room, payload);
     }
 
     public void broadcast(String room, String message) {
 
         // Redis gives the message to RedisSubscriber to send to the servers
         // this will send it to the servers (called by RedisSubscriber)
+        var peers = roomPeers.getOrDefault(room, new CopyOnWriteArraySet<>());
+        var dead = new ArrayList<WebSocketSession>();
+        for (var s : peers) {
+            try {
+                s.sendMessage(new org.springframework.web.socket.TextMessage(message));
+            } catch (Exception e) {
+                dead.add(s); // socket is closed/broken
+            }
+        }
+        peers.removeAll(dead);
     }
 }
