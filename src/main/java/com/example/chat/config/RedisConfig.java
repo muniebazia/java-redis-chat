@@ -8,7 +8,6 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 
 @Configuration
 public class RedisConfig {
@@ -28,18 +27,11 @@ public class RedisConfig {
     }
 
     @Bean
-    public MessageListenerAdapter listenerAdapter(RedisSubscriber subscriber) {
-
-        // knows what to do when a message is received
-        return new MessageListenerAdapter(subscriber, "handleMessage");
-    }
-
-    @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory factory, MessageListenerAdapter listenerAdapter) {
+    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory factory, RedisSubscriber redisSubscriber) {
 
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(factory);
-        container.addMessageListener(listenerAdapter, new PatternTopic("room:*"));
+        container.addMessageListener(redisSubscriber, new PatternTopic("room:*"));
         return container;
     }
 

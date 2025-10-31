@@ -102,7 +102,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         ChatMessage message = new ChatMessage(room, user, s);
         String payload = mapper.writeValueAsString(message);
-        System.out.println(room);
         redis.convertAndSend("room:" + room, payload);
     }
 
@@ -112,10 +111,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         // this will send it to the servers (called by RedisSubscriber)
         var peers = roomPeers.getOrDefault(room, new CopyOnWriteArraySet<>());
         var dead = new ArrayList<WebSocketSession>();
+        System.out.println(room);
+        System.out.println(peers);
+        System.out.println(roomPeers.get(room));
+        System.out.println(roomPeers);
+
         for (var s : peers) {
+            System.out.println("1");
+            System.out.println(s);
             try {
+                System.out.println("4");
                 s.sendMessage(new org.springframework.web.socket.TextMessage(message));
+                System.out.println("2");
             } catch (Exception e) {
+                System.out.println("5");
                 dead.add(s); // socket is closed/broken
             }
         }
